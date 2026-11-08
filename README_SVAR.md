@@ -38,7 +38,14 @@ Imaget kjøres lokalt med docker run -p 9999:8080, slik at appen er tilgjengelig
 
 ## Oppgave 2A – Terraform
 
-(Hva du lagde, hvilke ressurser, og eventuelle valg.)
+All Terraform-kode ligger i `infra/` (`provider.tf`, `variables.tf`, `main.tf`, `outputs.tf`).
+
+**Ressurser:**
+- `aws_ecs_express_gateway_service` (`wishifai-9`): kjører imaget fra ECR på port 8080, med health check på `/actuator/health`.
+- `aws_s3_bucket` (`wishifai-uploads-9`): lagrer opplastede bilder.
+- `aws_iam_role` og `aws_iam_role_policy` (`wishifai-task-role-9`): task role med tilgang til S3 (PutObject/GetObject), Rekognition DetectLabels, Bedrock InvokeModel og CloudWatch PutMetricData.
+
+**Offentlig URL:
 
 ## Oppgave 2B – Backend
 
