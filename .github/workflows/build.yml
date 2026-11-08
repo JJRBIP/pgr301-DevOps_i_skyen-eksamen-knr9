@@ -6,7 +6,7 @@ on:
 
 env:
   AWS_REGION: eu-west-1
-  ECR_REPOSITORY: wishifai-<nr>
+  ECR_REPOSITORY: wishifai-9
 
 jobs:
   build:
