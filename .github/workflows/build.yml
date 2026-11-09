@@ -1,4 +1,4 @@
-name: Build og push til ECR
+name: Build og push til ECR, deretter Terraform
 
 on:
   push:
@@ -34,3 +34,36 @@ jobs:
           docker build -t $IMAGE:${{ github.sha }} -t $IMAGE:latest .
           docker push $IMAGE:${{ github.sha }}
           docker push $IMAGE:latest
+
+  terraform:
+    needs: build
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: infra
+    steps:
+      - name: Hent koden
+        uses: actions/checkout@v4
+
+      - name: Konfigurer AWS-credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Sett opp Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      - name: Terraform format-sjekk
+        run: terraform fmt -check -recursive
+
+      - name: Terraform init
+        run: terraform init
+
+      - name: Terraform validate
+        run: terraform validate
+
+      - name: Terraform apply
+        run: terraform apply -auto-approve -var "image_tag=${{ github.sha }}"

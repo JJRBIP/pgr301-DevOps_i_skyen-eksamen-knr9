@@ -11,20 +11,7 @@ target/
 .terraform/
 *.tfstate
 *.tfstate.*
-.terraform.lock.hcl
+tfplan
 
 .env
 *.local
-
-target/
-.idea/
-*.iml
-.DS_Store
-.terraform/
-*.tfstate
-*.tfstate.*
-
-infra/.terraform/
-*.tfstate
-*.tfstate.*infra/tfplan
-tfplan
