@@ -50,8 +50,8 @@ resource "aws_cloudwatch_dashboard" "wishifai" {
           metrics = [
             [local.cw_namespace, "wishifai.bedrock.duration.avg", { stat = "Average", label = "Bedrock snitt" }],
             [local.cw_namespace, "wishifai.bedrock.duration.max", { stat = "Maximum", label = "Bedrock maks" }],
-            [local.cw_namespace, "wishifai.rekognition.duration.avg", { stat = "Average", label = "Rekognition snitt" }],
-            [local.cw_namespace, "wishifai.rekognition.duration.max", { stat = "Maximum", label = "Rekognition maks" }],
+            [local.cw_namespace, "wishifai.rekognition.duration.avg", { stat = "Average", label = "Rekognition snitt", yAxis = "right" }],
+            [local.cw_namespace, "wishifai.rekognition.duration.max", { stat = "Maximum", label = "Rekognition maks", yAxis = "right" }],
           ]
         }
       },
