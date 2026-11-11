@@ -85,13 +85,77 @@ bygget feiler, kjører ikke Terraform i det hele tatt, og en ødelagt versjon ru
 
 **Grønn kjøring:**: https://github.com/JJRBIP/pgr301-DevOps_i_skyen-eksamen-knr9/actions/runs/42620820542
 
-## Oppgave 3A – Metrikker
+## Oppgave 3 – Observability
 
-(Hvilke metrikker du lagde og hvorfor.)
+### 3A – Metrikker i applikasjonen
 
-## Oppgave 3B – Dashboard og alarm
+Jeg bruker Micrometer og det eksisterende CloudWatch-registeret, og metrikkene
+publiseres i namespace `wishifai`. `MetricsConfig` returnerte et tomt namespace, noe som ga
+feilen "Namespace is required" i loggen. Jeg rettet det til `wishifai`.
 
-(Hva dashboardet viser, alarmens terskel, og skjermbilde.)
+| Metrikk | Type | Hva den måler |
+|---|---|---|
+| `wishifai.rekognition.duration` | Timer | Tid for `detectLabels` mot Rekognition |
+| `wishifai.bedrock.duration` | Timer | Tid for `converse` mot Bedrock |
+| `wishifai.images.analyzed` (tag `roomType`) | Counter | Analyserte bilder per romtype |
+| `wishifai.gifts.suggested` | Counter | Antall gaveforslag generert |
+| `wishifai.bedrock.parse.failures` | Counter | Antall ganger Bedrock-svaret ikke kunne parses som JSON |
+
+**Tidsmålingene.** Grunderen vil vite hvor tiden går. Et kall til `/api/analyze` laster
+opp bildet til S3, kjører Rekognition og så Bedrock. Ved å time Rekognition og Bedrock hver
+for seg ser jeg hvilket av de to eksterne kallene som er flaskehalsen.
+
+**Business-metrikker.** Jeg valgte antall analyserte bilder per romtype (stue, barnerom,
+garasje, annet), fordi det viser hva brukerne faktisk laster opp og dermed hvilke
+kundegrupper tjenesten brukes av. Antall gaveforslag er selve produktet kundene får, og det
+henger sammen med Bedrock-kostnaden, siden hvert kall koster penger. Romtypen bestemmes av en
+enkel regel basert på labels fra Rekognition (for eksempel "Living Room" eller "Couch" gir
+stue). Det er en forenkling og ikke en eksakt klassifisering.
+
+**Parse-feil.** Bedrock-svar er ikke deterministiske, og modellen kan svare i et annet format
+enn appen forventer. Telleren viser hvor ofte det skjer, noe brukeren ellers bare ville
+opplevd som dårlige resultater uten at noe krasjer.
+
+### 3B – Dashboard og alarm
+
+Dashboardet `wishifai-9-dashboard` og alarmen `wishifai-9-bedrock-treg` er definert i
+`infra/monitoring.tf`. Terraform-jobben i pipelinen oppretter dem.
+
+Skjermbilder med reelle data (kjørt mot den deployede tjenesten):
+
+![Dashboard, øvre del](docs/Dashboardet/dashboard-1.png)
+![Dashboard, nedre del](docs/Dashboardet/dashboard-2.png)
+![Alarmer](docs/Alarm/alarm.png)
+
+**Dashboardet** har åtte grafer:
+- Business: analyserte bilder per romtype, og gaveforslag sammen med parse-feil.
+- Applikasjon: Bedrock- og Rekognition-tid, HTTP-latens per endepunkt, JVM heap og GC-pauser.
+- Infrastruktur: ECS CPU og minne, og antall tasks (`LiveTaskCount`).
+
+Bedrock og Rekognition ligger på hver sin akse i samme graf, fordi størrelsesordenen er så
+ulik at Rekognition ellers ikke ville vært synlig. HTTP-, JVM- og GC-grafene bruker
+`SEARCH`-uttrykk, siden disse metrikkene har mange dimensjoner.
+
+**Hva målingene viser.** Bedrock-kallet tar rundt 13–17 sekunder, mens Rekognition tar rundt
+0,6–1,8 sekunder. `POST /api/analyze` tar til sammen opptil rundt 19 sekunder, mens
+de andre endepunktene (helse og actuator) svarer på noen få millisekunder. Nesten all
+ventetiden ligger altså i Bedrock, og det er der en forbedring vil ha størst effekt. Antall
+tasks gikk mellom 1 og 2 under testene. Jeg har ikke undersøkt autoskaleringen nærmere.
+
+**Alarmen** varsler når gjennomsnittlig Bedrock-tid (`wishifai.bedrock.duration.avg`) er over
+20 sekunder i to perioder på fem minutter. Jeg valgte Bedrock fordi det er det tregeste leddet
+og det brukeren venter på. Terskelen ligger over dagens normale nivå (13–17 sekunder), slik
+at alarmen bare går ved en reell forverring og ikke hele tiden. Manglende data regnes som OK,
+så alarmen ikke varsler når ingen bruker tjenesten.
+
+Begrensning: alarmen har ingen varslingskanal (som SNS), så den endrer bare status i CloudWatch.
+
+De andre alarmene i konsollen (`TargetTracking-...` og `RollbackAlarm`) er laget av ECS
+Express, ikke av min Terraform-kode. At `AlarmLow` står som "In alarm", betyr at CPU er lav
+nok til at autoskaleringen kan skalere ned, og er normalt.
+
+**Begrensninger.** Testtrafikken brukte ett og samme bilde, så all aktivitet havner i
+kategorien `stue`. Business-metrikkene viser dermed bare én romtype i bildene.
 
 ## Oppgave 4 – Drøfting
 
