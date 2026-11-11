@@ -27,11 +27,11 @@ public class RekognitionService {
     }
 
     public List<String> detectLabels(byte[] bytes) {
-        DetectLabelsResponse resp = client.detectLabels(DetectLabelsRequest.builder()
+        DetectLabelsResponse resp = detectTimer.record(() -> client.detectLabels(DetectLabelsRequest.builder()
                 .image(Image.builder().bytes(SdkBytes.fromByteArray(bytes)).build())
                 .maxLabels(20)
                 .minConfidence(70f)
-                .build());
+                .build()));
 
         return resp.labels().stream().map(Label::name).toList();
     }
