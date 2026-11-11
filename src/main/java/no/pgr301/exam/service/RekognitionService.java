@@ -1,5 +1,8 @@
 package no.pgr301.exam.service;
 
+
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Timer;
 import org.springframework.stereotype.Service;
 import software.amazon.awssdk.core.SdkBytes;
 import software.amazon.awssdk.services.rekognition.RekognitionClient;
@@ -14,9 +17,13 @@ import java.util.List;
 public class RekognitionService {
 
     private final RekognitionClient client;
+    private final Timer detectTimer;
 
-    public RekognitionService(RekognitionClient client) {
+    public RekognitionService(RekognitionClient client, MeterRegistry registry) {
         this.client = client;
+        this.detectTimer = Timer.builder("wishifai.rekognition.duration")
+                .description("Tid for Rekognition detectLabels")
+                .register(registry);
     }
 
     public List<String> detectLabels(byte[] bytes) {
