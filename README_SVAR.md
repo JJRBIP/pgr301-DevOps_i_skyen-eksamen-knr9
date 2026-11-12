@@ -159,4 +159,38 @@ kategorien `stue`. Business-metrikkene viser dermed bare én romtype i bildene.
 
 ## Oppgave 4 – Drøfting
 
-(300–500 ord, skrevet av deg.)
+Wishifai har vist meg at en applikasjon kan være teknisk frisk og likevel gi dårlige svar.
+Dashboardet mitt fra oppgave 3 ser fint ut: Bedrock bruker 13–17 sekunder, det er ingen
+parse-feil og CPU er lav. Likevel sier ingenting der om en gaveliste er upassende eller uegnet
+for et barn. Med generativ AI er «kjører den?» og «er svaret godt nok?» to ulike spørsmål, og
+DevOps-praksisene må dekke begge.
+
+**Testing.** Vanlige tester forutsetter at samme input gir samme output. Bedrock er ikke
+deterministisk, så jeg kan ikke sammenligne svaret med en fasit. Testene må i stedet sjekke
+egenskaper at svaret er gyldig JSON, at det har høyst fem forslag og at ingen forslag tilhører
+uønskede kategorier, for eksempel alkohol til et barnerom. Et fast sett med testbilder, et
+eval-sett, kan kjøres i pipelinen og sammenlignes mellom versjoner, og en egen modell kan
+vurdere svarene som stikkprøve («LLM-as-judge»). Slike tester gir sannsynlighet og ikke
+garanti, så de erstatter ikke menneskelig vurdering.
+
+**Kontinuerlig leveranse.** Jeg tagger imaget med commit-SHA, så jeg vet hvilken kode som
+kjører. Men svaret avhenger også av prompten og modell-ID-en, og de kan endres uten at resten
+av koden endres. Derfor bør prompt og modellversjon versjoneres som kode, gå gjennom samme
+pipeline og kunne rulles tilbake. Fra forelesningene kjenner jeg feature toggles og
+canary-utrulling, der en endring først slippes til få brukere, og et «cluster immune system»
+som ruller tilbake automatisk hvis KPI-er bryter grenseverdier. En modellendring ville jeg
+sluppet til en liten andel av trafikken først.
+
+**Overvåking.** Alarmen min på gjennomsnittlig Bedrock-tid varsler bare når tjenesten er
+treg. Den fanger ikke at modellen svarer raskt og feil, og en Timer gir bare count, sum og
+max, ikke kvalitet. Jeg trenger flere signaler andel parse-feil (som jeg allerede teller),
+refusals, svarlengde, tokenforbruk og kostnad og tilbakemeldinger fra brukere. De må følges
+over tid for å oppdage drift. Alarmen min har heller ingen varslingskanal som SNS, så ingen
+ville fått beskjed.
+
+**Risikonivå.** Konsekvensen avgjør hvor strenge kontrollene må være. For gaver kan jeg leve
+med å oppdage feil i produksjon og rette dem raskt. Hvis en bank eller et legekontor brukte
+tjenesten til råd, må feil stoppes før produksjon. Strenge eval-sett som gate i pipelinen,
+menneskelig godkjenning av prompt- og modellbytter, og et menneske som godkjenner svar før
+kunden ser dem. Praksisene er de samme, men porten blir strengere og mindre automatisert jo
+høyere risikoen er.
